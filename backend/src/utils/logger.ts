@@ -30,6 +30,10 @@ const format = winston.format.combine(
   ),
 );
 
+// Check if we're in a serverless environment or production
+const isServerless = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.NODE_ENV === 'production';
+const isDevelopment = process.env.NODE_ENV === 'development' && !isServerless;
+
 // Define transports based on environment
 const transports: winston.transport[] = [
   // Console transport (always available)
@@ -41,32 +45,37 @@ const transports: winston.transport[] = [
   }),
 ];
 
-// Only add file transports in development (not in serverless environments)
-if (process.env.NODE_ENV === 'development') {
-  transports.push(
-    // File transport for errors
-    new winston.transports.File({
-      filename: 'logs/error.log',
-      level: 'error',
-      format: winston.format.combine(
-        winston.format.timestamp(),
-        winston.format.json()
-      ),
-    }),
-    // File transport for all logs
-    new winston.transports.File({
-      filename: 'logs/combined.log',
-      format: winston.format.combine(
-        winston.format.timestamp(),
-        winston.format.json()
-      ),
-    })
-  );
+// Only add file transports in local development (not in serverless environments)
+if (isDevelopment) {
+  try {
+    transports.push(
+      // File transport for errors
+      new winston.transports.File({
+        filename: 'logs/error.log',
+        level: 'error',
+        format: winston.format.combine(
+          winston.format.timestamp(),
+          winston.format.json()
+        ),
+      }),
+      // File transport for all logs
+      new winston.transports.File({
+        filename: 'logs/combined.log',
+        format: winston.format.combine(
+          winston.format.timestamp(),
+          winston.format.json()
+        ),
+      })
+    );
+  } catch (error) {
+    // If file transports fail, just use console
+    console.warn('Could not create file transports, using console only');
+  }
 }
 
 // Create the logger
 const logger = winston.createLogger({
-  level: process.env.NODE_ENV === 'development' ? 'debug' : 'info',
+  level: isDevelopment ? 'debug' : 'info',
   levels,
   format,
   transports,
