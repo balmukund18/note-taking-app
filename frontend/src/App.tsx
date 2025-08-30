@@ -61,6 +61,9 @@ function App() {
             
             {/* Default redirect */}
             <Route path="/" element={<Navigate to="/signup" replace />} />
+            
+            {/* Catch-all route for 404s */}
+            <Route path="*" element={<Navigate to="/signin" replace />} />
           </Routes>
           
           {/* Toast Notifications */}
