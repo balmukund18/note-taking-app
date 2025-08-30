@@ -30,48 +30,47 @@ const format = winston.format.combine(
   ),
 );
 
-// Define transports
-const transports = [
-  // Console transport
+// Define transports based on environment
+const transports: winston.transport[] = [
+  // Console transport (always available)
   new winston.transports.Console({
     format: winston.format.combine(
       winston.format.colorize(),
       winston.format.simple()
     ),
   }),
-  // File transport for errors
-  new winston.transports.File({
-    filename: 'logs/error.log',
-    level: 'error',
-    format: winston.format.combine(
-      winston.format.timestamp(),
-      winston.format.json()
-    ),
-  }),
-  // File transport for all logs
-  new winston.transports.File({
-    filename: 'logs/combined.log',
-    format: winston.format.combine(
-      winston.format.timestamp(),
-      winston.format.json()
-    ),
-  }),
 ];
+
+// Only add file transports in development (not in serverless environments)
+if (process.env.NODE_ENV === 'development') {
+  transports.push(
+    // File transport for errors
+    new winston.transports.File({
+      filename: 'logs/error.log',
+      level: 'error',
+      format: winston.format.combine(
+        winston.format.timestamp(),
+        winston.format.json()
+      ),
+    }),
+    // File transport for all logs
+    new winston.transports.File({
+      filename: 'logs/combined.log',
+      format: winston.format.combine(
+        winston.format.timestamp(),
+        winston.format.json()
+      ),
+    })
+  );
+}
 
 // Create the logger
 const logger = winston.createLogger({
-  level: process.env.NODE_ENV === 'development' ? 'debug' : 'warn',
+  level: process.env.NODE_ENV === 'development' ? 'debug' : 'info',
   levels,
   format,
   transports,
   exitOnError: false,
 });
-
-// If we're not in production then log to the console
-if (process.env.NODE_ENV !== 'production') {
-  logger.add(new winston.transports.Console({
-    format: winston.format.simple()
-  }));
-}
 
 export { logger };
