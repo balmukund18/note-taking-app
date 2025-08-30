@@ -64,7 +64,7 @@ export const otpRateLimit = rateLimit({
 // Create rate limiter for signup endpoints
 export const signupRateLimit = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 5, // Limit each IP to 5 signup attempts per hour
+  max: 20, // Increased from 5 to 20 signup attempts per hour
   message: {
     success: false,
     message: 'Too many signup attempts, please try again later.',
