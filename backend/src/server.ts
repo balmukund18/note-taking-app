@@ -37,12 +37,20 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
+    // Allow requests with no origin (like mobile apps, Postman, or curl requests)
     if (!origin) return callback(null, true);
     
+    // In development, allow any localhost origin
+    if (process.env.NODE_ENV === 'development' && origin.includes('localhost')) {
+      return callback(null, true);
+    }
+    
+    // Check if the origin is in our allowed list
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
+      // Log the rejected origin for debugging
+      console.log('CORS rejected origin:', origin);
       callback(new Error('Not allowed by CORS'));
     }
   },
