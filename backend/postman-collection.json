@@ -1,0 +1,613 @@
+{
+  "info": {
+    "name": "Note Taking App API",
+    "description": "Complete API collection for testing dual signup, OTP verification, Google OAuth, and notes management",
+    "_postman_id": "note-taking-app-collection",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "1. Email Signup",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"SecurePass123!\",\n  \"name\": \"Test User\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/auth/signup",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "auth", "signup"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "2. Verify OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"otp\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/auth/verify-otp",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "auth", "verify-otp"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "3. Resend OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/auth/resend-otp",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "auth", "resend-otp"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4. Email Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"SecurePass123!\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/auth/login",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "type": "text/javascript",
+                  "exec": [
+                    "if (pm.response.code === 200) {",
+                    "    const response = pm.response.json();",
+                    "    pm.environment.set('ACCESS_TOKEN', response.data.accessToken);",
+                    "    pm.environment.set('REFRESH_TOKEN', response.data.refreshToken);",
+                    "}"
+                  ]
+                }
+              }
+            ]
+          },
+          "response": []
+        },
+        {
+          "name": "5. Google Signup",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idToken\": \"GOOGLE_ID_TOKEN_HERE\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/auth/google-signup",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "auth", "google-signup"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "6. Google Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idToken\": \"GOOGLE_ID_TOKEN_HERE\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/auth/google-login",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "auth", "google-login"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "7. Get Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ACCESS_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/auth/me",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "auth", "me"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "8. Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ACCESS_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/auth/logout",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "auth", "logout"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Notes Management",
+      "item": [
+        {
+          "name": "1. Create Note",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ACCESS_TOKEN}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"My First Note\",\n  \"content\": \"This is the content of my first note. It can contain detailed information.\",\n  \"tags\": [\"personal\", \"important\"],\n  \"isPinned\": false\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/notes",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "notes"]
+            },
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "type": "text/javascript",
+                  "exec": [
+                    "if (pm.response.code === 201) {",
+                    "    const response = pm.response.json();",
+                    "    pm.environment.set('NOTE_ID', response.data.note._id);",
+                    "}"
+                  ]
+                }
+              }
+            ]
+          },
+          "response": []
+        },
+        {
+          "name": "2. Get All Notes",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ACCESS_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/notes?page=1&limit=10",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "notes"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "3. Get Single Note",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ACCESS_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/notes/{{NOTE_ID}}",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "notes", "{{NOTE_ID}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4. Update Note",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ACCESS_TOKEN}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Updated Note Title\",\n  \"content\": \"This is the updated content of my note.\",\n  \"tags\": [\"personal\", \"important\", \"updated\"],\n  \"isPinned\": true\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/notes/{{NOTE_ID}}",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "notes", "{{NOTE_ID}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "5. Pin/Unpin Note",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ACCESS_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/notes/{{NOTE_ID}}/pin",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "notes", "{{NOTE_ID}}", "pin"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "6. Archive/Unarchive Note",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ACCESS_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/notes/{{NOTE_ID}}/archive",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "notes", "{{NOTE_ID}}", "archive"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "7. Search Notes",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ACCESS_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/notes/search?q=important&page=1&limit=10",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "notes", "search"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "important"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "8. Get Pinned Notes",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ACCESS_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/notes?isPinned=true",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "notes"],
+              "query": [
+                {
+                  "key": "isPinned",
+                  "value": "true"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "9. Get Archived Notes",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ACCESS_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/notes?isArchived=true",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "notes"],
+              "query": [
+                {
+                  "key": "isArchived",
+                  "value": "true"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "10. Delete Note",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ACCESS_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/notes/{{NOTE_ID}}",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "notes", "{{NOTE_ID}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Error Handling Tests",
+      "item": [
+        {
+          "name": "Invalid Email Format",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"invalid-email\",\n  \"password\": \"SecurePass123!\",\n  \"name\": \"Test User\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/auth/signup",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "auth", "signup"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Password Too Weak",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"weak\",\n  \"name\": \"Test User\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/auth/signup",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "auth", "signup"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Invalid OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"otp\": \"000000\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/auth/verify-otp",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "auth", "verify-otp"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "User Not Found",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"nonexistent@example.com\",\n  \"password\": \"SecurePass123!\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/auth/login",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "auth", "login"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Unauthorized Access",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/api/notes",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "notes"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Invalid Token",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer invalid-token"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/notes",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "notes"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{BASE_URL}}/api/health",
+          "host": ["{{BASE_URL}}"],
+          "path": ["api", "health"]
+        }
+      },
+      "response": []
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "BASE_URL",
+      "value": "http://localhost:5000",
+      "type": "string"
+    }
+  ]
+}

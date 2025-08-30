@@ -1,0 +1,60 @@
+{
+  "name": "note-taking-app-backend",
+  "version": "1.0.0",
+  "description": "Backend for note-taking app with dual signup, OTP verification, and Google OAuth",
+  "main": "dist/server.js",
+  "scripts": {
+    "start": "node dist/server.js",
+    "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
+    "build": "tsc",
+    "test": "jest",
+    "lint": "eslint src/**/*.ts",
+    "format": "prettier --write src/**/*.ts",
+    "clean:users": "node cleanup-db.js users",
+    "clean:notes": "node cleanup-db.js notes",
+    "clean:all": "node cleanup-db.js all",
+    "clean:stats": "node cleanup-db.js stats",
+    "clean": "node cleanup-db.js"
+  },
+  "keywords": ["nodejs", "typescript", "mongodb", "jwt", "oauth", "otp"],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "mongoose": "^7.5.0",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "cors": "^2.8.5",
+    "helmet": "^7.0.0",
+    "express-rate-limit": "^6.10.0",
+    "express-validator": "^7.0.1",
+    "nodemailer": "^6.9.4",
+    "google-auth-library": "^9.0.0",
+    "dotenv": "^16.3.1",
+    "winston": "^3.10.0",
+    "compression": "^1.7.4",
+    "morgan": "^1.10.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.17",
+    "@types/node": "^20.5.0",
+    "@types/bcryptjs": "^2.4.3",
+    "@types/jsonwebtoken": "^9.0.2",
+    "@types/cors": "^2.8.14",
+    "@types/nodemailer": "^6.4.10",
+    "@types/compression": "^1.7.3",
+    "@types/morgan": "^1.9.5",
+    "@types/jest": "^29.5.5",
+    "@typescript-eslint/eslint-plugin": "^6.4.1",
+    "@typescript-eslint/parser": "^6.4.1",
+    "eslint": "^8.47.0",
+    "prettier": "^3.0.2",
+    "jest": "^29.6.2",
+    "ts-jest": "^29.1.1",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.1.6"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

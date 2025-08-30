@@ -1,0 +1,158 @@
+# Note Taking App - Authentication API Tests
+# Server running on: http://localhost:3001
+
+### 1. Health Check
+GET http://localhost:3001/api/health
+Content-Type: application/json
+
+### 2. Test Regular Signup (Email + OTP)
+POST http://localhost:3001/api/auth/signup
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "password": "StrongPass123!",
+  "firstName": "John",
+  "lastName": "Doe"
+}
+
+### 3. Test Invalid Email Format
+POST http://localhost:3001/api/auth/signup
+Content-Type: application/json
+
+{
+  "email": "invalid-email",
+  "password": "StrongPass123!",
+  "firstName": "John",
+  "lastName": "Doe"
+}
+
+### 4. Test Weak Password
+POST http://localhost:3001/api/auth/signup
+Content-Type: application/json
+
+{
+  "email": "test2@example.com",
+  "password": "123",
+  "firstName": "John",
+  "lastName": "Doe"
+}
+
+### 5. Verify OTP (use OTP from email)
+POST http://localhost:3001/api/auth/verify-otp
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "otp": "123456"
+}
+
+### 6. Test Invalid OTP
+POST http://localhost:3001/api/auth/verify-otp
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "otp": "000000"
+}
+
+### 7. Resend OTP
+POST http://localhost:3001/api/auth/resend-otp
+Content-Type: application/json
+
+{
+  "email": "test@example.com"
+}
+
+### 8. Login with Email/Password
+POST http://localhost:3001/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "password": "StrongPass123!"
+}
+
+### 9. Test Login with Wrong Password
+POST http://localhost:3001/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "password": "WrongPassword"
+}
+
+### 10. Test Login with Non-existent User
+POST http://localhost:3001/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "nonexistent@example.com",
+  "password": "StrongPass123!"
+}
+
+### 11. Google Signup (use after setting up Google OAuth)
+POST http://localhost:3001/api/auth/google-signup
+Content-Type: application/json
+
+{
+  "googleToken": "GOOGLE_ACCESS_TOKEN_HERE"
+}
+
+### 12. Google Login (use after setting up Google OAuth)
+POST http://localhost:3001/api/auth/google-login
+Content-Type: application/json
+
+{
+  "googleToken": "GOOGLE_ACCESS_TOKEN_HERE"
+}
+
+### 13. Test Protected Route (Notes - replace JWT_TOKEN with actual token from login)
+GET http://localhost:3001/api/notes
+Authorization: Bearer JWT_TOKEN_HERE
+
+### 14. Create Note (replace JWT_TOKEN with actual token)
+POST http://localhost:3001/api/notes
+Authorization: Bearer JWT_TOKEN_HERE
+Content-Type: application/json
+
+{
+  "title": "Test Note",
+  "content": "This is a test note content",
+  "tags": ["test", "sample"]
+}
+
+### 15. Get All Notes (replace JWT_TOKEN with actual token)
+GET http://localhost:3001/api/notes
+Authorization: Bearer JWT_TOKEN_HERE
+
+### 16. Get Single Note (replace NOTE_ID and JWT_TOKEN)
+GET http://localhost:3001/api/notes/NOTE_ID_HERE
+Authorization: Bearer JWT_TOKEN_HERE
+
+### 17. Update Note (replace NOTE_ID and JWT_TOKEN)
+PUT http://localhost:3001/api/notes/NOTE_ID_HERE
+Authorization: Bearer JWT_TOKEN_HERE
+Content-Type: application/json
+
+{
+  "title": "Updated Test Note",
+  "content": "This is updated content",
+  "tags": ["updated", "test"]
+}
+
+### 18. Delete Note (replace NOTE_ID and JWT_TOKEN)
+DELETE http://localhost:3001/api/notes/NOTE_ID_HERE
+Authorization: Bearer JWT_TOKEN_HERE
+
+### 19. Search Notes (replace JWT_TOKEN)
+GET http://localhost:3001/api/notes/search?q=test
+Authorization: Bearer JWT_TOKEN_HERE
+
+### 20. Refresh Token (replace REFRESH_TOKEN)
+POST http://localhost:3001/api/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "REFRESH_TOKEN_HERE"
+}
