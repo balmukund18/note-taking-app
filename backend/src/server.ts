@@ -59,7 +59,10 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Set-Cookie'], // Important for Safari cookie handling
+  preflightContinue: false,
+  optionsSuccessStatus: 204, // Some legacy browsers choke on 204
 }));
 
 // Compression middleware
