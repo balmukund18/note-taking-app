@@ -59,6 +59,7 @@ export const authenticateToken = async (
       // Fetch user from database to ensure user still exists and is active
       const user = await User.findById(decoded.userId);
       if (!user) {
+        console.log('User not found for token:', decoded.userId);
         res.status(401).json({
           success: false,
           message: 'User not found',
@@ -87,6 +88,7 @@ export const authenticateToken = async (
       let errorCode = 'INVALID_TOKEN';
 
       if (tokenError instanceof Error) {
+        console.log('Token verification failed:', tokenError.message);
         if (tokenError.message === 'Token expired') {
           errorMessage = 'Token expired';
           errorCode = 'TOKEN_EXPIRED';

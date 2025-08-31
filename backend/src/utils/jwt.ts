@@ -78,6 +78,7 @@ class JWTService {
       const decoded = jwt.verify(token, this.accessTokenSecret, {
         issuer: 'note-taking-app',
         audience: 'note-taking-app-users',
+        clockTolerance: 60, // Allow 60 seconds of clock skew
       }) as TokenPayload;
       
       return decoded;
@@ -85,8 +86,10 @@ class JWTService {
       if (error instanceof jwt.TokenExpiredError) {
         throw new Error('Token expired');
       } else if (error instanceof jwt.JsonWebTokenError) {
+        console.error('JWT Verification Error:', error.message);
         throw new Error('Invalid token');
       } else {
+        console.error('Token verification error:', error);
         throw new Error('Token verification failed');
       }
     }
@@ -100,6 +103,7 @@ class JWTService {
       const decoded = jwt.verify(token, this.refreshTokenSecret, {
         issuer: 'note-taking-app',
         audience: 'note-taking-app-users',
+        clockTolerance: 60, // Allow 60 seconds of clock skew
       }) as RefreshTokenPayload;
       
       return decoded;
@@ -107,8 +111,10 @@ class JWTService {
       if (error instanceof jwt.TokenExpiredError) {
         throw new Error('Refresh token expired');
       } else if (error instanceof jwt.JsonWebTokenError) {
+        console.error('Refresh JWT Verification Error:', error.message);
         throw new Error('Invalid refresh token');
       } else {
+        console.error('Refresh token verification error:', error);
         throw new Error('Refresh token verification failed');
       }
     }
