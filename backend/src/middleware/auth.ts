@@ -31,6 +31,19 @@ export const authenticateToken = async (
       token = req.cookies.accessToken;
     }
 
+    // Debug logging for production
+    if (process.env.NODE_ENV === 'production') {
+      console.log('Auth Debug:', {
+        hasAuthHeader: !!authHeader,
+        hasCookies: !!req.cookies,
+        cookieKeys: req.cookies ? Object.keys(req.cookies) : [],
+        hasAccessTokenCookie: !!(req.cookies && req.cookies.accessToken),
+        hasToken: !!token,
+        userAgent: req.headers['user-agent'],
+        origin: req.headers.origin,
+      });
+    }
+
     if (!token) {
       res.status(401).json({
         success: false,

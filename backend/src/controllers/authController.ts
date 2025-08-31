@@ -30,19 +30,32 @@ const setAuthCookies = (res: Response, accessToken: string, refreshToken: string
   // Set httpOnly cookies for secure token storage
   const isProduction = process.env.NODE_ENV === 'production';
   
-  res.cookie('accessToken', accessToken, {
+  const cookieOptions = {
     httpOnly: true,
     secure: isProduction,
-    sameSite: isProduction ? 'none' : 'lax', // 'none' required for cross-origin in production
+    sameSite: isProduction ? 'none' as const : 'lax' as const, // 'none' required for cross-origin in production
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-  });
-  
-  res.cookie('refreshToken', refreshToken, {
+  };
+
+  const refreshCookieOptions = {
     httpOnly: true,
     secure: isProduction,
-    sameSite: isProduction ? 'none' : 'lax', // 'none' required for cross-origin in production
+    sameSite: isProduction ? 'none' as const : 'lax' as const, // 'none' required for cross-origin in production
     maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-  });
+  };
+  
+  // Debug logging for production
+  if (isProduction) {
+    console.log('Setting cookies with options:', {
+      isProduction,
+      secure: cookieOptions.secure,
+      sameSite: cookieOptions.sameSite,
+      httpOnly: cookieOptions.httpOnly
+    });
+  }
+  
+  res.cookie('accessToken', accessToken, cookieOptions);
+  res.cookie('refreshToken', refreshToken, refreshCookieOptions);
 };
 
 /**
@@ -537,17 +550,14 @@ export const logout = catchAsync(async (req: Request, res: Response): Promise<vo
   // Clear httpOnly cookies with same settings as when they were set
   const isProduction = process.env.NODE_ENV === 'production';
   
-  res.clearCookie('accessToken', {
+  const clearCookieOptions = {
     httpOnly: true,
     secure: isProduction,
-    sameSite: isProduction ? 'none' : 'lax',
-  });
+    sameSite: isProduction ? 'none' as const : 'lax' as const,
+  };
   
-  res.clearCookie('refreshToken', {
-    httpOnly: true,
-    secure: isProduction,
-    sameSite: isProduction ? 'none' : 'lax',
-  });
+  res.clearCookie('accessToken', clearCookieOptions);
+  res.clearCookie('refreshToken', clearCookieOptions);
   
   // In a production app, you might want to blacklist the token
   // For now, we'll just return a success response
