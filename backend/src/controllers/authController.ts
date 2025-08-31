@@ -30,26 +30,18 @@ const setAuthCookies = (res: Response, accessToken: string, refreshToken: string
   // Set httpOnly cookies for secure token storage
   const isProduction = process.env.NODE_ENV === 'production';
   
-  // Safari-compatible cookie options
   const cookieOptions = {
     httpOnly: true,
-    secure: isProduction, // Must be true for sameSite: 'none'
-    sameSite: isProduction ? 'none' as const : 'lax' as const,
+    secure: isProduction,
+    sameSite: isProduction ? 'none' as const : 'lax' as const, // 'none' required for cross-origin in production
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    // Add domain for better compatibility (optional)
-    ...(isProduction && {
-      domain: undefined, // Let browser handle domain automatically
-    })
   };
 
   const refreshCookieOptions = {
     httpOnly: true,
     secure: isProduction,
-    sameSite: isProduction ? 'none' as const : 'lax' as const,
+    sameSite: isProduction ? 'none' as const : 'lax' as const, // 'none' required for cross-origin in production
     maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-    ...(isProduction && {
-      domain: undefined,
-    })
   };
   
   // Debug logging for production
@@ -562,9 +554,6 @@ export const logout = catchAsync(async (req: Request, res: Response): Promise<vo
     httpOnly: true,
     secure: isProduction,
     sameSite: isProduction ? 'none' as const : 'lax' as const,
-    ...(isProduction && {
-      domain: undefined,
-    })
   };
   
   res.clearCookie('accessToken', clearCookieOptions);
