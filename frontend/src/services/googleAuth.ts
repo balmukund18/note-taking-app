@@ -131,6 +131,36 @@ export const signInWithGoogle = (): Promise<string> => {
       backdrop.style.height = '100%';
       backdrop.style.backgroundColor = 'rgba(0,0,0,0.5)';
       backdrop.style.zIndex = '9999';
+      backdrop.style.cursor = 'pointer';
+      
+      // Set up cleanup function
+      const cleanup = () => {
+        if (document.body.contains(backdrop)) {
+          document.body.removeChild(backdrop);
+        }
+        if (document.body.contains(buttonContainer)) {
+          document.body.removeChild(buttonContainer);
+        }
+        document.removeEventListener('keydown', keyHandler);
+      };
+      
+      // Add click outside to close functionality
+      backdrop.onclick = (e) => {
+        if (e.target === backdrop) {
+          clearTimeout(timeout);
+          cleanup();
+          reject(new Error('Google sign-in was cancelled.'));
+        }
+      };
+      
+      // Add keyboard support (ESC to close)
+      const keyHandler = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') {
+          clearTimeout(timeout);
+          cleanup();
+          reject(new Error('Google sign-in was cancelled.'));
+        }
+      };
       
       // Add title
       const title = document.createElement('div');
@@ -167,7 +197,7 @@ export const signInWithGoogle = (): Promise<string> => {
       };
       cancelButton.onclick = () => {
         clearTimeout(timeout);
-        document.body.removeChild(backdrop);
+        cleanup();
         reject(new Error('Google sign-in was cancelled.'));
       };
       buttonContainer.appendChild(cancelButton);
@@ -175,6 +205,9 @@ export const signInWithGoogle = (): Promise<string> => {
       // Add the containers to DOM
       document.body.appendChild(backdrop);
       document.body.appendChild(buttonContainer);
+
+      // Add keyboard event listener
+      document.addEventListener('keydown', keyHandler);
 
       // Render the Google button
       window.google.accounts.id.renderButton(buttonContainer, {
@@ -184,16 +217,6 @@ export const signInWithGoogle = (): Promise<string> => {
         text: 'signin_with',
         shape: 'rectangular',
       });
-
-      // Set up cleanup
-      const cleanup = () => {
-        if (document.body.contains(backdrop)) {
-          document.body.removeChild(backdrop);
-        }
-        if (document.body.contains(buttonContainer)) {
-          document.body.removeChild(buttonContainer);
-        }
-      };
 
       // Override the handler to include cleanup
       const originalHandler = credentialResponseHandler;

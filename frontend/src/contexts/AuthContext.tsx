@@ -38,25 +38,33 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // Check for existing authentication on mount
   useEffect(() => {
-    const token = localStorage.getItem('accessToken');
-    const userData = localStorage.getItem('user');
-    
-    if (token && userData) {
+    const checkAuthStatus = async () => {
       try {
-        const parsedUser = JSON.parse(userData);
-        setUser(parsedUser);
+        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/auth/me`, {
+          credentials: 'include'
+        });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.data?.user) {
+            setUser(data.data.user);
+          }
+        } else if (response.status === 401) {
+          // User is not authenticated, which is normal for first visit
+          setUser(null);
+        }
       } catch (error) {
-        // Clear invalid data
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('user');
+        console.error('Auth check failed:', error);
+        setUser(null);
+      } finally {
+        setIsLoading(false);
       }
-    }
-    setIsLoading(false);
+    };
+
+    checkAuthStatus();
   }, []);
 
   // API Base URL
-  const API_BASE_URL = 'http://localhost:3001/api';
+  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
   // Helper function for API calls
   const apiCall = async (endpoint: string, method: string = 'GET', body?: any) => {
@@ -66,6 +74,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // This enables httpOnly cookies
       };
       
       if (body) {
@@ -77,6 +86,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const data = await response.json();
       
       if (!response.ok) {
+        // Handle validation errors specifically
+        if (data.errors && Array.isArray(data.errors)) {
+          const errorMessages = data.errors.map((err: any) => `${err.field}: ${err.message}`).join('\n');
+          throw new Error(`Validation failed:\n${errorMessages}`);
+        }
         throw new Error(data.message || 'An error occurred');
       }
       
@@ -90,8 +104,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Sign up function
   const signup = async (name: string, email: string, dateOfBirth: string): Promise<boolean> => {
     try {
-      setIsLoading(true);
-      
       const response = await apiCall('/auth/signup', 'POST', {
         name,
         email,
@@ -124,7 +136,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
       return false;
     } finally {
-      setIsLoading(false);
+      // Remove global loading state management
     }
   };
 
@@ -132,8 +144,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Signin function (sends OTP to verified users)
   const signin = async (email: string): Promise<boolean> => {
     try {
-      setIsLoading(true);
-      
       const response = await apiCall('/auth/signin', 'POST', { email });
 
       if (response.success) {
@@ -165,32 +175,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
       return false;
     } finally {
-      setIsLoading(false);
+      // Remove global loading state management
     }
   };
 
   // Login function (verify signin OTP)
   const login = async (email: string, otp: string, keepLoggedIn: boolean = false): Promise<boolean> => {
     try {
-      setIsLoading(true);
-      
       const response = await apiCall('/auth/verify-signin-otp', 'POST', {
         email,
         otp
       });
 
       if (response.success && response.data) {
-        const { user: userData, accessToken, refreshToken } = response.data;
+        const { user: userData } = response.data;
         
-        // Store tokens and user data
-        localStorage.setItem('accessToken', accessToken);
-        localStorage.setItem('refreshToken', refreshToken);
-        localStorage.setItem('user', JSON.stringify(userData));
-        
-        if (keepLoggedIn) {
-          localStorage.setItem('keepLoggedIn', 'true');
-        }
-        
+        // User data and tokens are now handled via httpOnly cookies
         setUser(userData);
         clearStoredEmail();
         toast.success(`Welcome back, ${userData.name}!`);
@@ -201,14 +201,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       toast.error(error.message || 'Login failed');
       return false;
     } finally {
-      setIsLoading(false);
+      // Remove global loading state management
     }
   };
 
   // Verify OTP function (for signup flow)
   const verifyOTP = async (email: string, otp: string): Promise<boolean> => {
     try {
-      setIsLoading(true);
       
       const response = await apiCall('/auth/verify-otp', 'POST', {
         email,
@@ -216,13 +215,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
 
       if (response.success && response.data) {
-        const { user: userData, accessToken, refreshToken } = response.data;
+        const { user: userData } = response.data;
         
-        // Auto-login after successful OTP verification
-        localStorage.setItem('accessToken', accessToken);
-        localStorage.setItem('refreshToken', refreshToken);
-        localStorage.setItem('user', JSON.stringify(userData));
-        
+        // Auto-login after successful OTP verification - tokens handled via httpOnly cookies
         setUser(userData);
         clearStoredEmail();
         toast.success(`Welcome, ${userData.name}! Account verified successfully.`);
@@ -233,7 +228,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       toast.error(error.message || 'OTP verification failed');
       return false;
     } finally {
-      setIsLoading(false);
+      // Remove global loading state management
     }
   };
 
@@ -254,8 +249,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       if (errorCode === 'USER_NOT_FOUND') {
         toast.error('Account not found. Please check your email or sign up first.');
-      } else if (errorCode === 'EMAIL_ALREADY_VERIFIED') {
-        toast.error('Your email is already verified. You can sign in directly.');
       } else if (errorCode === 'OTP_RATE_LIMITED' || errorCode === 'OTP_RATE_LIMIT_EXCEEDED') {
         // Extract the wait time from the error message
         const waitTimeMatch = errorMessage.match(/(\d+)\s*seconds?/);
@@ -272,11 +265,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   // Logout function
-  const logout = () => {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('user');
-    localStorage.removeItem('keepLoggedIn');
+  const logout = async () => {
+    try {
+      // Call logout API to clear httpOnly cookies
+      await fetch(`${API_BASE_URL}/auth/logout`, {
+        method: 'POST',
+        credentials: 'include'
+      });
+    } catch (error) {
+      console.error('Logout API call failed:', error);
+    }
+    
     setUser(null);
     toast.success('Logged out successfully');
   };
@@ -297,20 +296,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Google Signup function
   const googleSignup = async (idToken: string): Promise<boolean> => {
     try {
-      setIsLoading(true);
-      
       const response = await apiCall('/auth/google-signup', 'POST', {
         idToken
       });
 
       if (response.success && response.data) {
-        const { user: userData, accessToken, refreshToken } = response.data;
+        const { user: userData } = response.data;
         
-        // Store tokens and user data
-        localStorage.setItem('accessToken', accessToken);
-        localStorage.setItem('refreshToken', refreshToken);
-        localStorage.setItem('user', JSON.stringify(userData));
-        
+        // User data and tokens are now handled via httpOnly cookies
         setUser(userData);
         
         // Show appropriate message based on response
@@ -344,27 +337,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
       return false;
     } finally {
-      setIsLoading(false);
+      // Remove global loading state management
     }
   };
 
   // Google Login function
   const googleLogin = async (idToken: string): Promise<boolean> => {
     try {
-      setIsLoading(true);
-      
       const response = await apiCall('/auth/google-login', 'POST', {
         idToken
       });
 
       if (response.success && response.data) {
-        const { user: userData, accessToken, refreshToken } = response.data;
+        const { user: userData } = response.data;
         
-        // Store tokens and user data
-        localStorage.setItem('accessToken', accessToken);
-        localStorage.setItem('refreshToken', refreshToken);
-        localStorage.setItem('user', JSON.stringify(userData));
-        
+        // User data and tokens are now handled via httpOnly cookies
         setUser(userData);
         
         // Show appropriate message based on response
@@ -391,7 +378,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
       return false;
     } finally {
-      setIsLoading(false);
+      // Remove global loading state management
     }
   };
 

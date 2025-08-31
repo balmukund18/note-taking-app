@@ -22,8 +22,14 @@ export const authenticateToken = async (
   next: NextFunction
 ): Promise<void> => {
   try {
+    // Try to get token from Authorization header first, then from cookies
     const authHeader = req.headers.authorization;
-    const token = jwtService.extractTokenFromHeader(authHeader);
+    let token = jwtService.extractTokenFromHeader(authHeader);
+    
+    // If no token in header, try to get from httpOnly cookie
+    if (!token && req.cookies && req.cookies.accessToken) {
+      token = req.cookies.accessToken;
+    }
 
     if (!token) {
       res.status(401).json({

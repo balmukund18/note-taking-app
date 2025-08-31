@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'react-hot-toast';
@@ -12,10 +12,89 @@ export const SignUp: React.FC = () => {
     dateOfBirth: '',
     email: '',
   });
-  const [isLoading, setIsLoading] = useState(false);
+  const [isEmailLoading, setIsEmailLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const formRef = useRef<HTMLDivElement>(null);
   
   const { signup, googleSignup, setStoredEmail, checkUserExists } = useAuth();
   const navigate = useNavigate();
+
+  // Reset form function
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      dateOfBirth: '',
+      email: '',
+    });
+    setIsEmailLoading(false);
+    setIsGoogleLoading(false);
+    toast.dismiss(); // Clear any existing toasts
+  };
+
+  // Handle click outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (formRef.current && !formRef.current.contains(event.target as Node)) {
+        // Only reset if user has started filling the form OR if loading
+        const hasFormData = formData.name.trim() || formData.email.trim() || formData.dateOfBirth.trim();
+        const isAnyLoading = isEmailLoading || isGoogleLoading;
+        
+        if ((hasFormData || isAnyLoading) && !document.hidden) {
+          resetForm();
+          if (hasFormData) {
+            toast.success('Form reset! Start fresh.', { duration: 2000 });
+          } else if (isAnyLoading) {
+            toast.success('Loading cancelled.', { duration: 2000 });
+          }
+        }
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [formData, isEmailLoading, isGoogleLoading]);
+
+  // Handle browser refresh (F5, Ctrl+R)
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      // Only show warning if user has entered data
+      const hasFormData = formData.name.trim() || formData.email.trim() || formData.dateOfBirth.trim();
+      const isAnyLoading = isEmailLoading || isGoogleLoading;
+      
+      if (hasFormData || isAnyLoading) {
+        event.preventDefault();
+        event.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+        return event.returnValue;
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      // Reset form when user comes back to tab (after potential refresh)
+      const isAnyLoading = isEmailLoading || isGoogleLoading;
+      if (!document.hidden && !isAnyLoading) {
+        // Small delay to ensure page is fully loaded
+        setTimeout(() => {
+          const urlParams = new URLSearchParams(window.location.search);
+          if (urlParams.get('refresh') === 'true') {
+            resetForm();
+            toast.success('Page refreshed! Ready for new signup.', { duration: 3000 });
+            // Clean up URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+          }
+        }, 100);
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [formData, isEmailLoading, isGoogleLoading]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -25,13 +104,9 @@ export const SignUp: React.FC = () => {
     }));
   };
 
-  const validateForm = () => {
+    const validateForm = () => {
     if (!formData.name.trim()) {
       toast.error('Please enter your name');
-      return false;
-    }
-    if (!formData.dateOfBirth) {
-      toast.error('Please select your date of birth');
       return false;
     }
     if (!formData.email.trim()) {
@@ -42,7 +117,32 @@ export const SignUp: React.FC = () => {
       toast.error('Please enter a valid email address');
       return false;
     }
+    if (!formData.dateOfBirth.trim()) {
+      toast.error('Please enter your date of birth');
+      return false;
+    }
     return true;
+  };
+
+  // Convert date to ISO format for backend
+  const formatDateForBackend = (dateString: string): string => {
+    if (!dateString) return '';
+    
+    // If it's already in YYYY-MM-DD format, return as is
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+      return dateString;
+    }
+    
+    // Try to parse various date formats
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+      throw new Error('Invalid date format');
+    }
+    
+    // Return in ISO format (YYYY-MM-DD)
+    const isoString = date.toISOString();
+    const datePart = isoString.split('T')[0];
+    return datePart || '';
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -50,7 +150,7 @@ export const SignUp: React.FC = () => {
     
     if (!validateForm()) return;
     
-    setIsLoading(true);
+    setIsEmailLoading(true);
     
     try {
       // First check if user already exists
@@ -59,20 +159,21 @@ export const SignUp: React.FC = () => {
       if (userCheck.exists) {
         if (userCheck.authProvider === 'google') {
           toast.error('This email is registered with Google. Please use "Sign in with Google" instead.');
-          setIsLoading(false);
+          setIsEmailLoading(false);
           return;
         } else {
           toast.error('Account already exists. Redirecting to Sign In...');
           setTimeout(() => {
             navigate('/signin');
           }, 1500);
-          setIsLoading(false);
+          setIsEmailLoading(false);
           return;
         }
       }
 
       // User doesn't exist, proceed with signup
-      const success = await signup(formData.name, formData.email, formData.dateOfBirth);
+      const formattedDate = formatDateForBackend(formData.dateOfBirth);
+      const success = await signup(formData.name, formData.email, formattedDate);
       if (success) {
         // Navigate to OTP verification page instead of signin
         navigate('/otp-verification', { 
@@ -86,7 +187,7 @@ export const SignUp: React.FC = () => {
     } catch (error) {
       console.error('Signup error:', error);
     } finally {
-      setIsLoading(false);
+      setIsEmailLoading(false);
     }
   };
 
@@ -99,7 +200,7 @@ export const SignUp: React.FC = () => {
 
   const handleGoogleSignUp = async () => {
     try {
-      setIsLoading(true);
+      setIsGoogleLoading(true);
       
       let idToken: string;
       
@@ -143,13 +244,13 @@ export const SignUp: React.FC = () => {
         toast.error(error.message || 'Google sign-up failed. Please try again.');
       }
     } finally {
-      setIsLoading(false);
+      setIsGoogleLoading(false);
     }
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl shadow-2xl p-6 sm:p-8 w-full max-w-md mx-auto">
+      <div ref={formRef} className="bg-white rounded-3xl shadow-2xl p-6 sm:p-8 w-full max-w-md mx-auto">
         {/* Header */}
         <div className="text-center mb-6 sm:mb-8">
           <div className="flex justify-center mb-4">
@@ -218,10 +319,10 @@ export const SignUp: React.FC = () => {
           {/* Get OTP Button */}
           <button
             type="submit"
-            disabled={isLoading}
+            disabled={isEmailLoading}
             className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold py-3 px-4 rounded-lg hover:from-blue-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isLoading ? (
+            {isEmailLoading ? (
               <div className="flex items-center justify-center">
                 <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -245,7 +346,7 @@ export const SignUp: React.FC = () => {
         {/* Google Sign Up Button */}
         <button 
           onClick={handleGoogleSignUp}
-          disabled={isLoading}
+          disabled={isGoogleLoading}
           className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
@@ -254,7 +355,7 @@ export const SignUp: React.FC = () => {
             <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
             <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
           </svg>
-          {isLoading ? 'Signing up...' : 'Continue with Google'}
+          {isGoogleLoading ? 'Signing up...' : 'Continue with Google'}
         </button>
 
         {/* Sign In Link */}

@@ -148,15 +148,29 @@ export const validateNoteTags = (): ValidationChain => {
 export const validateDateOfBirth = (): ValidationChain => {
   return body('dateOfBirth')
     .optional()
-    .isISO8601()
-    .withMessage('Date of birth must be a valid date')
     .custom((value) => {
+      if (!value) return true; // Optional field
+      
+      // Try to parse the date
       const date = new Date(value);
+      
+      // Check if it's a valid date
+      if (isNaN(date.getTime())) {
+        throw new Error('Date of birth must be a valid date');
+      }
+      
+      // Check age constraints
       const now = new Date();
       const age = now.getFullYear() - date.getFullYear();
-      if (age < 13 || age > 120) {
+      const monthDiff = now.getMonth() - date.getMonth();
+      
+      // More accurate age calculation
+      const actualAge = monthDiff < 0 || (monthDiff === 0 && now.getDate() < date.getDate()) ? age - 1 : age;
+      
+      if (actualAge < 13 || actualAge > 120) {
         throw new Error('Age must be between 13 and 120 years');
       }
+      
       return true;
     });
 };

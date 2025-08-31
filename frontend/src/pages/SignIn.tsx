@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'react-hot-toast';
@@ -9,10 +9,91 @@ export const SignIn: React.FC = () => {
   const [formData, setFormData] = useState({
     email: '',
   });
-  const [isLoading, setIsLoading] = useState(false);
+  const [isEmailLoading, setIsEmailLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const formRef = useRef<HTMLDivElement>(null);
   
   const { signin, googleLogin, getStoredEmail, setStoredEmail, checkUserExists } = useAuth();
   const navigate = useNavigate();
+
+  // Reset form function
+  const resetForm = () => {
+    // Don't clear stored email from signup flow
+    const storedEmail = getStoredEmail();
+    setFormData({
+      email: storedEmail || '',
+    });
+    setIsEmailLoading(false);
+    setIsGoogleLoading(false);
+    toast.dismiss(); // Clear any existing toasts
+  };
+
+  // Handle click outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (formRef.current && !formRef.current.contains(event.target as Node)) {
+        // Only reset if user has started typing (different from stored email) OR if loading
+        const storedEmail = getStoredEmail() || '';
+        const hasUserInput = formData.email.trim() !== storedEmail;
+        const isAnyLoading = isEmailLoading || isGoogleLoading;
+        
+        if ((hasUserInput || isAnyLoading) && !document.hidden) {
+          resetForm();
+          if (hasUserInput) {
+            toast.success('Form reset!', { duration: 2000 });
+          } else if (isAnyLoading) {
+            toast.success('Loading cancelled.', { duration: 2000 });
+          }
+        }
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [formData, isEmailLoading, isGoogleLoading, getStoredEmail]);
+
+    // Handle browser refresh (F5, Ctrl+R)
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      // Only show warning if user has typed different email or is loading
+      const storedEmail = getStoredEmail() || '';
+      const hasUserInput = formData.email.trim() !== storedEmail;
+      const isAnyLoading = isEmailLoading || isGoogleLoading;
+      
+      if (hasUserInput || isAnyLoading) {
+        event.preventDefault();
+        event.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+        return event.returnValue;
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      // Reset form when user comes back to tab (after potential refresh)
+      const isAnyLoading = isEmailLoading || isGoogleLoading;
+      if (!document.hidden && !isAnyLoading) {
+        // Small delay to ensure page is fully loaded
+        setTimeout(() => {
+          const urlParams = new URLSearchParams(window.location.search);
+          if (urlParams.get('refresh') === 'true') {
+            resetForm();
+            toast.success('Page refreshed! Ready for sign in.', { duration: 3000 });
+            // Clean up URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+          }
+        }, 100);
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [formData, isEmailLoading, isGoogleLoading, getStoredEmail]);
 
   // Check if there's a stored email from signup flow
   useEffect(() => {
@@ -45,7 +126,7 @@ export const SignIn: React.FC = () => {
   const handleSendOTP = async () => {
     if (!validateEmail()) return;
     
-    setIsLoading(true);
+    setIsEmailLoading(true);
     try {
       // First check if user exists
       const userCheck = await checkUserExists(formData.email);
@@ -55,13 +136,13 @@ export const SignIn: React.FC = () => {
         setTimeout(() => {
           navigate('/signup');
         }, 1500);
-        setIsLoading(false);
+        setIsEmailLoading(false);
         return;
       }
 
       if (userCheck.authProvider === 'google') {
         toast.error('This email is registered with Google. Please use "Sign in with Google" instead.');
-        setIsLoading(false);
+        setIsEmailLoading(false);
         return;
       }
 
@@ -81,7 +162,7 @@ export const SignIn: React.FC = () => {
     } catch (error: any) {
       console.error('Send OTP error:', error);
     } finally {
-      setIsLoading(false);
+      setIsEmailLoading(false);
     }
   };
 
@@ -100,7 +181,7 @@ export const SignIn: React.FC = () => {
 
   const handleGoogleSignIn = async () => {
     try {
-      setIsLoading(true);
+      setIsGoogleLoading(true);
       
       // Initialize Google Auth if not already done
       await initializeGoogleAuth();
@@ -131,13 +212,13 @@ export const SignIn: React.FC = () => {
         toast.error(error.message || 'Google sign-in failed. Please try again.');
       }
     } finally {
-      setIsLoading(false);
+      setIsGoogleLoading(false);
     }
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl shadow-2xl p-6 sm:p-8 w-full max-w-md mx-auto">
+      <div ref={formRef} className="bg-white rounded-3xl shadow-2xl p-6 sm:p-8 w-full max-w-md mx-auto">
         {/* Header */}
         <div className="text-center mb-6 sm:mb-8">
           <div className="flex justify-center mb-4">
@@ -172,10 +253,10 @@ export const SignIn: React.FC = () => {
               <button
                 type="button"
                 onClick={handleSendOTP}
-                disabled={isLoading}
+                disabled={isEmailLoading}
                 className="px-4 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap sm:w-auto w-full"
               >
-                {isLoading ? 'Sending...' : 'Send OTP'}
+                {isEmailLoading ? 'Sending...' : 'Send OTP'}
               </button>
             </div>
           </div>
@@ -191,7 +272,7 @@ export const SignIn: React.FC = () => {
         {/* Google Sign In Button */}
         <button 
           onClick={handleGoogleSignIn}
-          disabled={isLoading}
+          disabled={isGoogleLoading}
           className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
@@ -200,7 +281,7 @@ export const SignIn: React.FC = () => {
             <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
             <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
           </svg>
-          {isLoading ? 'Signing in...' : 'Continue with Google'}
+          {isGoogleLoading ? 'Signing in...' : 'Continue with Google'}
         </button>
 
         {/* Sign Up Link */}

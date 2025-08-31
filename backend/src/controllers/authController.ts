@@ -24,6 +24,26 @@ export interface AuthResponse {
 }
 
 /**
+ * Helper function to set httpOnly cookies for authentication
+ */
+const setAuthCookies = (res: Response, accessToken: string, refreshToken: string) => {
+  // Set httpOnly cookies for secure token storage
+  res.cookie('accessToken', accessToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  });
+  
+  res.cookie('refreshToken', refreshToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+  });
+};
+
+/**
  * POST /api/auth/signup
  * Email + name + dateOfBirth signup with OTP verification (no password)
  */
@@ -133,6 +153,9 @@ export const googleSignup = catchAsync(async (req: Request, res: Response): Prom
     // Generate JWT tokens
     const { accessToken, refreshToken } = jwtService.generateTokenPair(user);
 
+    // Set httpOnly cookies
+    setAuthCookies(res, accessToken, refreshToken);
+
     // Send welcome email if email is verified
     if (user.isEmailVerified) {
       await emailService.sendWelcomeEmail(user.email, user.name);
@@ -152,8 +175,6 @@ export const googleSignup = catchAsync(async (req: Request, res: Response): Prom
           isEmailVerified: user.isEmailVerified,
           authProvider: user.authProvider,
         },
-        accessToken,
-        refreshToken,
       },
     });
   } catch (error) {
@@ -213,6 +234,9 @@ export const verifyOTP = catchAsync(async (req: Request, res: Response): Promise
   // Generate JWT tokens
   const { accessToken, refreshToken } = jwtService.generateTokenPair(user);
 
+  // Set httpOnly cookies
+  setAuthCookies(res, accessToken, refreshToken);
+
   // Send welcome email
   await emailService.sendWelcomeEmail(user.email, user.name);
 
@@ -230,8 +254,6 @@ export const verifyOTP = catchAsync(async (req: Request, res: Response): Promise
         isEmailVerified: user.isEmailVerified,
         authProvider: user.authProvider,
       },
-      accessToken,
-      refreshToken,
     },
   });
 });
@@ -342,6 +364,9 @@ export const verifySigninOTP = catchAsync(async (req: Request, res: Response): P
   // Generate JWT tokens
   const { accessToken, refreshToken } = jwtService.generateTokenPair(user);
 
+  // Set httpOnly cookies
+  setAuthCookies(res, accessToken, refreshToken);
+
   logger.info(`Signin successful for ${user.email}`);
 
   res.status(200).json({
@@ -356,8 +381,6 @@ export const verifySigninOTP = catchAsync(async (req: Request, res: Response): P
         isEmailVerified: user.isEmailVerified,
         authProvider: user.authProvider,
       },
-      accessToken,
-      refreshToken,
     },
   });
 });
@@ -416,6 +439,9 @@ export const googleLogin = catchAsync(async (req: Request, res: Response): Promi
     // Generate JWT tokens
     const { accessToken, refreshToken } = jwtService.generateTokenPair(user);
 
+    // Set httpOnly cookies
+    setAuthCookies(res, accessToken, refreshToken);
+
     logger.info(`Google login successful for ${user.email}`);
 
     res.status(200).json({
@@ -430,8 +456,6 @@ export const googleLogin = catchAsync(async (req: Request, res: Response): Promi
           isEmailVerified: user.isEmailVerified,
           authProvider: user.authProvider,
         },
-        accessToken,
-        refreshToken,
       },
     });
   } catch (error) {
@@ -444,7 +468,7 @@ export const googleLogin = catchAsync(async (req: Request, res: Response): Promi
 
 /**
  * POST /api/auth/resend-otp
- * Resend OTP for email verification
+ * Resend OTP for email verification or signin
  */
 export const resendOTP = catchAsync(async (req: Request, res: Response): Promise<void> => {
   const { email } = req.body;
@@ -453,11 +477,6 @@ export const resendOTP = catchAsync(async (req: Request, res: Response): Promise
   const user = await User.findOne({ email: email.toLowerCase() });
   if (!user) {
     throw new NotFoundError('User not found', 'USER_NOT_FOUND');
-  }
-
-  // Check if email is already verified
-  if (user.isEmailVerified) {
-    throw new ValidationError('Email already verified', 'EMAIL_ALREADY_VERIFIED');
   }
 
   // Check if user signed up with Google
@@ -479,7 +498,7 @@ export const resendOTP = catchAsync(async (req: Request, res: Response): Promise
     }
   }
 
-  // Generate and send new OTP
+  // Generate and send new OTP (works for both verified and unverified users)
   const otp = user.generateOTP();
   await user.save();
 
@@ -489,7 +508,10 @@ export const resendOTP = catchAsync(async (req: Request, res: Response): Promise
     throw new AppError('Failed to send verification email', 500, 'EMAIL_SEND_FAILED');
   }
 
-  logger.info(`OTP resent to ${email}`);
+  const logMessage = user.isEmailVerified 
+    ? `Signin OTP resent to ${email}` 
+    : `Signup OTP resent to ${email}`;
+  logger.info(logMessage);
 
   res.status(200).json({
     success: true,
@@ -510,6 +532,10 @@ export const resendOTP = catchAsync(async (req: Request, res: Response): Promise
  * Logout user (for future token blacklisting)
  */
 export const logout = catchAsync(async (req: Request, res: Response): Promise<void> => {
+  // Clear httpOnly cookies
+  res.clearCookie('accessToken');
+  res.clearCookie('refreshToken');
+  
   // In a production app, you might want to blacklist the token
   // For now, we'll just return a success response
   logger.info(`User ${req.user?._id} logged out`);
@@ -576,6 +602,9 @@ export const refreshToken = catchAsync(async (req: Request, res: Response): Prom
     // Generate new token pair
     const tokens = jwtService.generateTokenPair(user);
 
+    // Set httpOnly cookies
+    setAuthCookies(res, tokens.accessToken, tokens.refreshToken);
+
     logger.info(`Tokens refreshed for user ${user.email}`);
 
     res.status(200).json({
@@ -589,8 +618,6 @@ export const refreshToken = catchAsync(async (req: Request, res: Response): Prom
           isEmailVerified: user.isEmailVerified,
           authProvider: user.authProvider,
         },
-        accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
       },
     });
   } catch (error: any) {

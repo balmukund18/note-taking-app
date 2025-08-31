@@ -9,13 +9,27 @@ import OTPVerification from './pages/OTPVerification';
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return <div className="min-h-screen flex items-center justify-center">
+      <div className="text-gray-600">Loading...</div>
+    </div>;
+  }
+  
   return isAuthenticated ? <>{children}</> : <Navigate to="/signin" replace />;
 };
 
 // Public Route Component (redirect if already authenticated)
 const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return <div className="min-h-screen flex items-center justify-center">
+      <div className="text-gray-600">Loading...</div>
+    </div>;
+  }
+  
   return !isAuthenticated ? <>{children}</> : <Navigate to="/dashboard" replace />;
 };
 

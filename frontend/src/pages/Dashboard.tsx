@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'react-hot-toast';
 import { Logo } from '../components/Logo';
@@ -21,9 +21,10 @@ export const Dashboard: React.FC = () => {
     title: '',
     content: ''
   });
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
 
   // API Base URL
-  const API_BASE_URL = 'http://localhost:3001/api';
+  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
   // Format date helper function
   const formatDate = (dateString: string) => {
@@ -36,23 +37,16 @@ export const Dashboard: React.FC = () => {
     });
   };
 
-  // Helper function for authenticated API calls
+    // Helper function for authenticated API calls
   const authenticatedApiCall = async (endpoint: string, method: string = 'GET', body?: any) => {
     try {
-      const token = localStorage.getItem('accessToken');
-      
-      if (!token) {
-        toast.error('Please sign in to access your notes');
-        logout();
-        return null;
-      }
-      
+      // Tokens are now handled automatically via httpOnly cookies
       const fetchOptions: RequestInit = {
         method,
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
         },
+        credentials: 'include', // This sends httpOnly cookies
       };
       
       if (body) {
@@ -63,9 +57,12 @@ export const Dashboard: React.FC = () => {
       
       if (!response.ok) {
         if (response.status === 401) {
-          // Token expired, logout user
-          toast.error('Session expired. Please sign in again.');
-          logout();
+          // Only logout if we're sure the user should be authenticated
+          // Check if user is actually set in context first
+          if (user) {
+            toast.error('Session expired. Please sign in again.');
+            logout();
+          }
           return null;
         }
         // Try to get error message from response
@@ -79,11 +76,10 @@ export const Dashboard: React.FC = () => {
         }
         throw new Error(errorMessage);
       }
-      
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      console.error('API Error:', error);
+
+      return await response.json();
+    } catch (error: any) {
+      console.error('API call error:', error);
       throw error;
     }
   };
@@ -93,13 +89,18 @@ export const Dashboard: React.FC = () => {
     fetchNotes();
   }, []);
 
-  const fetchNotes = async () => {
+  const fetchNotes = useCallback(async (showRefreshToast = false) => {
     try {
       setIsLoading(true);
       const response = await authenticatedApiCall('/notes');
       
       if (response && response.success && response.data && Array.isArray(response.data.notes)) {
         setNotes(response.data.notes);
+        setLastRefresh(new Date());
+        
+        if (showRefreshToast) {
+          toast.success('Notes refreshed successfully');
+        }
       } else {
         // Initialize with empty array if response is invalid
         setNotes([]);
@@ -111,7 +112,51 @@ export const Dashboard: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  // Handle refresh functionality
+  const handleRefresh = useCallback(() => {
+    fetchNotes(true);
+  }, [fetchNotes]);
+
+  // Keyboard shortcuts and click outside detection
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Cmd+R or Ctrl+R for refresh (prevent default browser refresh)
+      if ((e.metaKey || e.ctrlKey) && e.key === 'r') {
+        e.preventDefault();
+        handleRefresh();
+      }
+      
+      // Escape to close create form
+      if (e.key === 'Escape' && showCreateForm) {
+        setShowCreateForm(false);
+        setNewNote({ title: '', content: '' });
+      }
+    };
+
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Element;
+      
+      // Close create form if clicking outside, but ignore clicks on the create note button
+      if (showCreateForm && 
+          !target.closest('.create-note-form') && 
+          !target.closest('.create-note-button')) {
+        setShowCreateForm(false);
+        setNewNote({ title: '', content: '' });
+      }
+    };
+
+    // Add event listeners
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('click', handleClickOutside);
+
+    // Cleanup
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [showCreateForm, handleRefresh]);
 
   const handleCreateNote = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -174,12 +219,44 @@ export const Dashboard: React.FC = () => {
               <Logo size="sm" />
               <h1 className="text-2xl font-bold text-gray-900">Notes App</h1>
             </div>
-            <button
-              onClick={handleLogout}
-              className="text-gray-600 hover:text-gray-900 font-medium transition-colors duration-200"
-            >
-              Logout
-            </button>
+            <div className="flex items-center space-x-4">
+              {/* Refresh Button */}
+              <button
+                onClick={handleRefresh}
+                disabled={isLoading}
+                className="flex items-center space-x-2 px-3 py-2 text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors duration-200 disabled:opacity-50"
+                title="Refresh notes (Cmd+R)"
+              >
+                <svg
+                  className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                  />
+                </svg>
+                <span className="hidden sm:inline">Refresh</span>
+              </button>
+              
+              {/* Last refresh indicator */}
+              {lastRefresh && (
+                <span className="text-xs text-gray-500 hidden md:inline">
+                  Last updated: {lastRefresh.toLocaleTimeString()}
+                </span>
+              )}
+              
+              <button
+                onClick={handleLogout}
+                className="text-gray-600 hover:text-gray-900 font-medium transition-colors duration-200"
+              >
+                Logout
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -202,7 +279,7 @@ export const Dashboard: React.FC = () => {
         <div className="mb-8">
           <button
             onClick={() => setShowCreateForm(!showCreateForm)}
-            className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200 flex items-center"
+            className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200 flex items-center create-note-button"
           >
             <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -213,7 +290,7 @@ export const Dashboard: React.FC = () => {
 
         {/* Create Note Form */}
         {showCreateForm && (
-          <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+          <div className="bg-white rounded-lg shadow-md p-6 mb-8 create-note-form">
             <form onSubmit={handleCreateNote} className="space-y-4">
               <div>
                 <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">

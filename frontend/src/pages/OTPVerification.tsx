@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'react-hot-toast';
@@ -15,6 +15,7 @@ export const OTPVerification: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isResendingOTP, setIsResendingOTP] = useState(false);
   const [countdown, setCountdown] = useState(0);
+  const formRef = useRef<HTMLDivElement>(null);
   
   const { verifyOTP, login, resendOTP, signin, getStoredEmail } = useAuth();
   const navigate = useNavigate();
@@ -26,11 +27,40 @@ export const OTPVerification: React.FC = () => {
   const isSignup = state?.isSignup || false;
   const message = state?.message || 'Please enter the OTP sent to your email.';
 
+  // Reset form function
+  const resetForm = () => {
+    setOtp('');
+    setIsLoading(false);
+    setIsResendingOTP(false);
+    toast.dismiss(); // Clear any existing toasts
+  };
+
+  // Handle click outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (formRef.current && !formRef.current.contains(event.target as Node)) {
+        // Only reset if user has started typing OTP
+        if (otp.trim() && !isLoading && !isResendingOTP) {
+          resetForm();
+          toast.success('OTP cleared!', { duration: 2000 });
+        }
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [otp, isLoading, isResendingOTP]);
+
   // Redirect if no email
   useEffect(() => {
     if (!email) {
       toast.error('No email found. Please start the process again.');
       navigate(isSignup ? '/signup' : '/signin');
+    } else {
+      // Set initial countdown when user arrives (OTP was just sent)
+      setCountdown(60);
     }
   }, [email, navigate, isSignup]);
 
@@ -77,8 +107,10 @@ export const OTPVerification: React.FC = () => {
       }
       
       if (success) {
-        // Both flows should go to dashboard after successful verification
-        navigate('/dashboard');
+        // Add a small delay to ensure auth state is updated
+        setTimeout(() => {
+          navigate('/dashboard');
+        }, 100);
       }
     } catch (error) {
       console.error('OTP verification error:', error);
@@ -92,28 +124,17 @@ export const OTPVerification: React.FC = () => {
     
     setIsResendingOTP(true);
     try {
-      let result;
-      
-      if (isSignup) {
-        // For signup flow: use resendOTP endpoint (for unverified users)
-        result = await resendOTP(email);
-        if (result.success) {
-          setCountdown(60); // Default 60 second countdown
-          toast.success('OTP sent successfully!');
-        } else if (result.waitTime) {
-          // Use the actual wait time from backend if available
-          setCountdown(result.waitTime);
-        }
-      } else {
-        // For signin flow: use signin endpoint again (for verified users)
-        const success = await signin(email);
-        if (success) {
-          setCountdown(30); // 30 second countdown for signin
-          toast.success('New OTP sent successfully!');
-        }
+      // Use resendOTP endpoint for both signup and signin flows
+      const result = await resendOTP(email);
+      if (result.success) {
+        setCountdown(60); // Default 60 second countdown
+        toast.success('OTP sent successfully!');
+      } else if (result.waitTime) {
+        // Use the actual wait time from backend if available
+        setCountdown(result.waitTime);
       }
       
-      // Error handling is done in the respective functions
+      // Error handling is done in the resendOTP function
     } catch (error) {
       console.error('Resend OTP error:', error);
       // Additional fallback error handling
@@ -130,7 +151,7 @@ export const OTPVerification: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <div className="max-w-md w-full space-y-6 sm:space-y-8">
-        <div className="bg-white rounded-xl shadow-lg p-6 sm:p-8">
+        <div ref={formRef} className="bg-white rounded-xl shadow-lg p-6 sm:p-8">
           <div className="text-center">
             {/* Logo Section */}
             <div className="flex justify-center mb-4 sm:mb-6">
@@ -188,21 +209,29 @@ export const OTPVerification: React.FC = () => {
               </button>
             </div>
 
-            <div className="text-center">
+            <div className="flex items-center justify-center space-x-3">
               <button
                 type="button"
                 onClick={handleResendOTP}
                 disabled={isResendingOTP || countdown > 0}
-                className="text-sm text-blue-600 hover:text-blue-500 disabled:text-gray-400 disabled:cursor-not-allowed"
+                className="text-sm text-blue-600 hover:text-blue-500 disabled:text-gray-400 disabled:cursor-not-allowed font-medium"
               >
-                {countdown > 0 ? (
-                  `Resend OTP in ${countdown}s`
-                ) : isResendingOTP ? (
-                  'Sending...'
-                ) : (
-                  'Resend OTP'
-                )}
+                {isResendingOTP ? 'Sending...' : 'Resend OTP'}
               </button>
+              
+              {countdown > 0 && (
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm text-gray-500">•</span>
+                  <div className="flex items-center space-x-1">
+                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span className="text-sm font-mono text-gray-600 bg-gray-100 px-2 py-1 rounded">
+                      {countdown}s
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="text-center">
