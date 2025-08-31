@@ -30,18 +30,25 @@ const setAuthCookies = (res: Response, accessToken: string, refreshToken: string
   // Set httpOnly cookies for secure token storage
   const isProduction = process.env.NODE_ENV === 'production';
   
+  // Safari-compatible cookie options
   const cookieOptions = {
     httpOnly: true,
     secure: isProduction,
-    sameSite: isProduction ? 'none' as const : 'lax' as const, // 'none' required for cross-origin in production
+    sameSite: isProduction ? 'none' as const : 'lax' as const,
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    // Safari-specific options
+    domain: isProduction ? undefined : undefined, // Let browser set domain
+    path: '/', // Explicit path for Safari
   };
 
   const refreshCookieOptions = {
     httpOnly: true,
     secure: isProduction,
-    sameSite: isProduction ? 'none' as const : 'lax' as const, // 'none' required for cross-origin in production
+    sameSite: isProduction ? 'none' as const : 'lax' as const,
     maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+    // Safari-specific options
+    domain: isProduction ? undefined : undefined,
+    path: '/', // Explicit path for Safari
   };
   
   // Debug logging for production
@@ -54,8 +61,16 @@ const setAuthCookies = (res: Response, accessToken: string, refreshToken: string
     });
   }
   
+  // Set cookies with Safari-compatible headers
   res.cookie('accessToken', accessToken, cookieOptions);
   res.cookie('refreshToken', refreshToken, refreshCookieOptions);
+  
+  // Add explicit Set-Cookie headers for Safari compatibility
+  if (isProduction) {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+  }
 };
 
 /**
@@ -554,10 +569,19 @@ export const logout = catchAsync(async (req: Request, res: Response): Promise<vo
     httpOnly: true,
     secure: isProduction,
     sameSite: isProduction ? 'none' as const : 'lax' as const,
+    path: '/', // Safari needs explicit path for clearing
+    domain: isProduction ? undefined : undefined,
   };
   
   res.clearCookie('accessToken', clearCookieOptions);
   res.clearCookie('refreshToken', clearCookieOptions);
+  
+  // Additional Safari-compatible headers
+  if (isProduction) {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+  }
   
   // In a production app, you might want to blacklist the token
   // For now, we'll just return a success response

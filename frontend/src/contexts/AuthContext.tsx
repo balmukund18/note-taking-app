@@ -41,7 +41,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const checkAuthStatus = async () => {
       try {
         const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/auth/me`, {
-          credentials: 'include'
+          credentials: 'include',
+          // Safari-specific options
+          cache: 'no-cache',
+          headers: {
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache',
+          }
         });
         if (response.ok) {
           const data = await response.json();
@@ -67,7 +73,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const recheckAuthStatus = async () => {
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/auth/me`, {
-        credentials: 'include'
+        credentials: 'include',
+        // Safari-specific options
+        cache: 'no-cache',
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache',
+        }
       });
       if (response.ok) {
         const data = await response.json();
@@ -90,8 +102,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         method,
         headers: {
           'Content-Type': 'application/json',
+          // Safari-specific headers
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache',
         },
-        credentials: 'include', // This enables httpOnly cookies
+        credentials: 'include', // This enables httpOnly cookies - critical for Safari
+        // Safari-specific options
+        cache: 'no-cache',
       };
       
       if (body) {
