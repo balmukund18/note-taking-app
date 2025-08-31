@@ -26,9 +26,19 @@ export const authenticateToken = async (
     const authHeader = req.headers.authorization;
     let token = jwtService.extractTokenFromHeader(authHeader);
     
-    // If no token in header, try to get from httpOnly cookie
-    if (!token && req.cookies && req.cookies.accessToken) {
+    // Enhanced cookie extraction for Safari
+    if (!token && req.cookies) {
       token = req.cookies.accessToken;
+    }
+    
+    // Fallback: Parse cookies manually (Safari sometimes needs this)
+    if (!token && req.headers.cookie) {
+      const cookies = req.headers.cookie.split(';').reduce((acc, cookie) => {
+        const [name, value] = cookie.trim().split('=');
+        acc[name] = value;
+        return acc;
+      }, {} as Record<string, string>);
+      token = cookies.accessToken;
     }
 
     // Debug logging for production
@@ -39,8 +49,9 @@ export const authenticateToken = async (
         cookieKeys: req.cookies ? Object.keys(req.cookies) : [],
         hasAccessTokenCookie: !!(req.cookies && req.cookies.accessToken),
         hasToken: !!token,
-        userAgent: req.headers['user-agent'],
+        userAgent: req.headers['user-agent']?.includes('Safari') ? 'Safari' : 'Other',
         origin: req.headers.origin,
+        rawCookieHeader: req.headers.cookie ? 'present' : 'missing'
       });
     }
 
@@ -88,7 +99,11 @@ export const authenticateToken = async (
       let errorCode = 'INVALID_TOKEN';
 
       if (tokenError instanceof Error) {
-        console.log('Token verification failed:', tokenError.message);
+        console.log('Token verification failed:', {
+          error: tokenError.message,
+          userAgent: req.headers['user-agent']?.includes('Safari') ? 'Safari' : 'Other'
+        });
+        
         if (tokenError.message === 'Token expired') {
           errorMessage = 'Token expired';
           errorCode = 'TOKEN_EXPIRED';
