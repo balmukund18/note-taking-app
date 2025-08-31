@@ -33,14 +33,14 @@ const setAuthCookies = (res: Response, accessToken: string, refreshToken: string
   const cookieOptions = {
     httpOnly: true,
     secure: isProduction,
-    sameSite: 'lax' as const, // ✅ Changed from 'none' to 'lax' for Safari compatibility
+    sameSite: isProduction ? 'none' as const : 'lax' as const, // 'none' required for cross-origin in production
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   };
 
   const refreshCookieOptions = {
     httpOnly: true,
     secure: isProduction,
-    sameSite: 'lax' as const, // ✅ Changed from 'none' to 'lax' for Safari compatibility
+    sameSite: isProduction ? 'none' as const : 'lax' as const, // 'none' required for cross-origin in production
     maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
   };
   
@@ -553,7 +553,7 @@ export const logout = catchAsync(async (req: Request, res: Response): Promise<vo
   const clearCookieOptions = {
     httpOnly: true,
     secure: isProduction,
-    sameSite: 'lax' as const, // ✅ Match the sameSite setting used when cookies were set
+    sameSite: isProduction ? 'none' as const : 'lax' as const,
   };
   
   res.clearCookie('accessToken', clearCookieOptions);

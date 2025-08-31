@@ -59,23 +59,8 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: [
-    'Content-Type', 
-    'Authorization',
-    'Cookie',
-    'Set-Cookie',
-    'X-Requested-With'
-  ],
-  exposedHeaders: ['Set-Cookie'],
-  optionsSuccessStatus: 200
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
-
-// Handle preflight requests explicitly for Safari
-app.options('*', (req, res) => {
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Allow-Origin', req.headers.origin);
-  res.sendStatus(200);
-});
 
 // Compression middleware
 app.use(compression());
