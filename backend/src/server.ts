@@ -33,8 +33,9 @@ app.use(helmet({
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
-  'https://note-taking-app-frontend-gray.vercel.app'
-];
+  'https://note-taking-app-frontend-gamma.vercel.app',
+  process.env.CORS_ORIGIN
+].filter(Boolean); // Remove undefined/null values
 
 app.use(cors({
   origin: function (origin, callback) {
@@ -52,6 +53,7 @@ app.use(cors({
     } else {
       // Log the rejected origin for debugging
       console.log('CORS rejected origin:', origin);
+      console.log('Allowed origins:', allowedOrigins);
       callback(new Error('Not allowed by CORS'));
     }
   },
