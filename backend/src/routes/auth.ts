@@ -37,25 +37,6 @@ router.post('/resend-otp', otpRateLimit, validateResendOTP, resendOTP);
 router.post('/refresh', authRateLimit, validateRefreshToken, refreshToken);
 router.post('/check-user', authRateLimit, checkUser);
 
-// Debug endpoint to test cookie/auth setup
-router.get('/debug', (req, res) => {
-  res.json({
-    success: true,
-    debug: {
-      nodeEnv: process.env.NODE_ENV,
-      hasCookies: !!req.cookies,
-      cookies: req.cookies || {},
-      headers: {
-        origin: req.headers.origin,
-        'user-agent': req.headers['user-agent'],
-        authorization: req.headers.authorization ? 'present' : 'missing'
-      },
-      corsOrigin: process.env.CORS_ORIGIN,
-      frontendUrl: process.env.FRONTEND_URL
-    }
-  });
-});
-
 // Protected routes
 router.post('/logout', authenticateToken, logout);
 router.get('/me', authenticateToken, getProfile);
