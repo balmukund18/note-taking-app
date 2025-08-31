@@ -28,17 +28,19 @@ export interface AuthResponse {
  */
 const setAuthCookies = (res: Response, accessToken: string, refreshToken: string) => {
   // Set httpOnly cookies for secure token storage
+  const isProduction = process.env.NODE_ENV === 'production';
+  
   res.cookie('accessToken', accessToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax', // 'none' required for cross-origin in production
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   });
   
   res.cookie('refreshToken', refreshToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax', // 'none' required for cross-origin in production
     maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
   });
 };
@@ -532,9 +534,20 @@ export const resendOTP = catchAsync(async (req: Request, res: Response): Promise
  * Logout user (for future token blacklisting)
  */
 export const logout = catchAsync(async (req: Request, res: Response): Promise<void> => {
-  // Clear httpOnly cookies
-  res.clearCookie('accessToken');
-  res.clearCookie('refreshToken');
+  // Clear httpOnly cookies with same settings as when they were set
+  const isProduction = process.env.NODE_ENV === 'production';
+  
+  res.clearCookie('accessToken', {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
+  });
+  
+  res.clearCookie('refreshToken', {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
+  });
   
   // In a production app, you might want to blacklist the token
   // For now, we'll just return a success response

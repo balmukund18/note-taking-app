@@ -63,6 +63,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     checkAuthStatus();
   }, []);
 
+  // Helper function to recheck auth status after login
+  const recheckAuthStatus = async () => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/auth/me`, {
+        credentials: 'include'
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.data?.user) {
+          setUser(data.data.user);
+        }
+      }
+    } catch (error) {
+      console.error('Auth recheck failed:', error);
+    }
+  };
+
   // API Base URL
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
@@ -194,6 +211,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setUser(userData);
         clearStoredEmail();
         toast.success(`Welcome back, ${userData.name}!`);
+        
+        // Double-check auth status to ensure cookies are properly set
+        setTimeout(() => recheckAuthStatus(), 100);
+        
         return true;
       }
       return false;
@@ -221,6 +242,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setUser(userData);
         clearStoredEmail();
         toast.success(`Welcome, ${userData.name}! Account verified successfully.`);
+        
+        // Double-check auth status to ensure cookies are properly set
+        setTimeout(() => recheckAuthStatus(), 100);
+        
         return true;
       }
       return false;
@@ -312,6 +337,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         } else {
           toast.success(`Welcome, ${userData.name}!`);
         }
+        
+        // Double-check auth status to ensure cookies are properly set
+        setTimeout(() => recheckAuthStatus(), 100);
+        
         return true;
       }
       return false;
@@ -360,6 +389,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         } else {
           toast.success(`Welcome back, ${userData.name}!`);
         }
+        
+        // Double-check auth status to ensure cookies are properly set
+        setTimeout(() => recheckAuthStatus(), 100);
+        
         return true;
       }
       return false;
