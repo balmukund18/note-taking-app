@@ -45,13 +45,8 @@ export const Dashboard: React.FC = () => {
         method,
         headers: {
           'Content-Type': 'application/json',
-          // Safari-specific headers
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache',
         },
-        credentials: 'include', // This sends httpOnly cookies - critical for Safari
-        // Safari-specific options
-        cache: 'no-cache',
+        credentials: 'include', // This sends httpOnly cookies
       };
       
       if (body) {

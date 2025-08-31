@@ -57,12 +57,9 @@ app.use(cors({
       callback(new Error('Not allowed by CORS'));
     }
   },
-  credentials: true, // Critical for Safari
+  credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie', 'X-Requested-With'],
-  exposedHeaders: ['Set-Cookie'], // Safari needs this
-  preflightContinue: false,
-  optionsSuccessStatus: 200, // Safari compatibility
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
 // Compression middleware
