@@ -35,6 +35,8 @@ const setAuthCookies = (res: Response, accessToken: string, refreshToken: string
     secure: isProduction,
     sameSite: isProduction ? 'none' as const : 'lax' as const, // 'none' required for cross-origin in production
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    domain: isProduction ? '.notes-motion.tech' : undefined, // Share cookies across subdomains
+    path: '/', // Explicit path for better compatibility
   };
 
   const refreshCookieOptions = {
@@ -42,6 +44,8 @@ const setAuthCookies = (res: Response, accessToken: string, refreshToken: string
     secure: isProduction,
     sameSite: isProduction ? 'none' as const : 'lax' as const, // 'none' required for cross-origin in production
     maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+    domain: isProduction ? '.notes-motion.tech' : undefined, // Share cookies across subdomains
+    path: '/', // Explicit path for better compatibility
   };
   
   // Debug logging for production
@@ -50,7 +54,8 @@ const setAuthCookies = (res: Response, accessToken: string, refreshToken: string
       isProduction,
       secure: cookieOptions.secure,
       sameSite: cookieOptions.sameSite,
-      httpOnly: cookieOptions.httpOnly
+      httpOnly: cookieOptions.httpOnly,
+      domain: cookieOptions.domain
     });
   }
   
@@ -554,6 +559,8 @@ export const logout = catchAsync(async (req: Request, res: Response): Promise<vo
     httpOnly: true,
     secure: isProduction,
     sameSite: isProduction ? 'none' as const : 'lax' as const,
+    domain: isProduction ? '.notes-motion.tech' : undefined, // Same domain as when set
+    path: '/', // Same path as when set
   };
   
   res.clearCookie('accessToken', clearCookieOptions);

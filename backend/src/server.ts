@@ -33,7 +33,8 @@ app.use(helmet({
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
-  'https://note-taking-app-frontend-gamma.vercel.app',
+  'https://notes-motion.tech', // Production frontend
+  'https://api.notes-motion.tech', // Production backend (for testing)
   process.env.CORS_ORIGIN
 ].filter(Boolean); // Remove undefined/null values
 
